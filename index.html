@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kommunaalkulude Kalkulaator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #f4f1ec;
+    --paper-dark: #e8e4dc;
+    --rule: #c4bfb4;
+    --accent: #2d5a27;
+    --accent-light: #e8f0e6;
+    --warn: #8b3a3a;
+    --warn-light: #f5e6e6;
+    --mono: 'DM Mono', 'Courier New', monospace;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --radius: 2px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  header {
+    border-bottom: 3px double var(--ink);
+    padding-bottom: 16px;
+    margin-bottom: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 400;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  h1 span {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--rule);
+    margin-top: 6px;
+  }
+
+  .lang-switch {
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .lang-switch button {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    border: 1px solid var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+
+  .lang-switch button:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+    border-right: none;
+  }
+
+  .lang-switch button:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+
+  .lang-switch button.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .section { margin-bottom: 32px; }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .field label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .field input, .field select {
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--ink);
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--ink);
+    box-shadow: 0 0 0 1px var(--ink);
+  }
+
+  .field input::placeholder {
+    color: #bbb;
+    font-size: 12px;
+  }
+
+  .apartments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .apt-card {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 16px;
+    position: relative;
+  }
+
+  .apt-card::before {
+    content: attr(data-apt);
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+  }
+
+  .apt-card .field {
+    min-width: unset;
+    margin-bottom: 8px;
+  }
+
+  .apt-card .field:last-child { margin-bottom: 0; }
+
+  .apt-card .field input {
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+
+  .divider-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    margin: 12px 0 6px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--rule);
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+
+  button.btn-primary, button.btn-secondary {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 12px 24px;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-secondary { background: transparent; color: var(--ink); }
+  .btn-secondary:hover { background: var(--ink); color: var(--paper); }
+  .btn-secondary:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-secondary:disabled:hover { background: transparent; color: var(--ink); }
+
+  .results { margin-top: 32px; display: none; }
+  .results.visible { display: block; }
+
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .results-table th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 500;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 2px solid var(--ink);
+    background: var(--paper-dark);
+  }
+
+  .results-table th.num { text-align: right; }
+
+  .results-table td { padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+
+  .results-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .results-table tr.total-row td {
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    font-weight: 500;
+  }
+
+  .results-table tr:hover td { background: var(--accent-light); }
+
+  .warning {
+    background: var(--warn-light);
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    padding: 8px 12px;
+    font-size: 12px;
+    margin-top: 12px;
+    border-radius: var(--radius);
+    display: none;
+  }
+
+  .warning.visible { display: block; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--rule);
+    text-align: center;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results.visible { animation: fadeUp 0.3s ease-out; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <div class="subtitle" id="subtitle"></div>
+    </div>
+    <div class="lang-switch">
+      <button id="langEt" onclick="setLang('et')">ET</button>
+      <button id="langEn" onclick="setLang('en')">EN</button>
+    </div>
+  </header>
+
+  <!-- Address & Settings -->
+  <div class="section">
+    <div class="section-title" data-t="sectionAddress"></div>
+    <div class="field-row">
+      <div class="field">
+        <label data-t="city"></label>
+        <input type="text" id="city" data-ph="phCity">
+      </div>
+      <div class="field">
+        <label data-t="street"></label>
+        <input type="text" id="street" data-ph="phStreet">
+      </div>
+      <div class="field">
+        <label data-t="house"></label>
+        <input type="text" id="house" data-ph="phHouse">
+      </div>
+      <div class="field" style="max-width: 140px;">
+        <label data-t="vatRate"></label>
+        <input type="number" id="vatRate" value="22" step="0.1" min="0">
+      </div>
+      <div class="field" style="max-width: 160px;">
+        <label data-t="aptCount"></label>
+        <select id="aptCount" onchange="rebuildApartments()">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Electricity -->
+  <div class="section">
+    <div class="section-title" data-t="sectionElec"></div>
+    <div class="field-row">
+      <div class="field">
+        <label data-t="totalKwh"></label>
+        <input type="number" id="elecTotalKwh" step="0.01" placeholder="kWh">
+      </div>
+      <div class="field">
+        <label data-t="totalPrice"></label>
+        <input type="number" id="elecTotalPrice" step="0.01" placeholder="€">
+      </div>
+      <div class="field">
+        <label data-t="amperage"></label>
+        <input type="number" id="amperageCostNoVat" step="0.01" placeholder="€">
+      </div>
+    </div>
+  </div>
+
+  <!-- Water -->
+  <div class="section">
+    <div class="section-title" data-t="sectionWater"></div>
+    <div class="field-row">
+      <div class="field">
+        <label data-t="totalM3"></label>
+        <input type="number" id="waterTotalM3" step="0.01" placeholder="m³">
+      </div>
+      <div class="field">
+        <label data-t="totalPrice"></label>
+        <input type="number" id="waterTotalPrice" step="0.01" placeholder="€">
+      </div>
+    </div>
+  </div>
+
+  <!-- Other fees -->
+  <div class="section">
+    <div class="section-title" data-t="sectionOther"></div>
+    <div class="field-row">
+      <div class="field" style="max-width: 240px;">
+        <label data-t="remondifond"></label>
+        <input type="number" id="remondifond" value="5" step="0.01" min="0" placeholder="€">
+      </div>
+    </div>
+  </div>
+
+  <!-- Apartments (dynamic) -->
+  <div class="section">
+    <div class="section-title" data-t="sectionApts"></div>
+    <div class="apartments-grid" id="aptsGrid"></div>
+  </div>
+
+  <div id="warningElec" class="warning"></div>
+  <div id="warningWater" class="warning"></div>
+
+  <div class="actions">
+    <button class="btn-primary" onclick="calculate()" data-t="btnCalc"></button>
+    <button class="btn-secondary" id="pdfBtn" onclick="generatePDF()" disabled data-t="btnPdf"></button>
+    <button class="btn-secondary" onclick="carryForward()" data-t="btnCarry"></button>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="section-title" data-t="sectionBreakdown"></div>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th data-t="thApt"></th>
+          <th class="num" data-t="thElecUsage"></th>
+          <th class="num" data-t="thElecCost"></th>
+          <th class="num" data-t="thAmpShare"></th>
+          <th class="num" data-t="thElecTotal"></th>
+          <th class="num" data-t="thWaterUsage"></th>
+          <th class="num" data-t="thWaterCost"></th>
+          <th class="num" data-t="thRemondifond"></th>
+          <th class="num" data-t="thGrandTotal"></th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// --- Translations ---
+const TR = {
+  et: {
+    title1: 'Kommunaalkulude', title2: 'Kalkulaator',
+    subtitle: 'Korterite kommunaalkulude kalkulaator — andmeid ei saadeta serverisse',
+    sectionAddress: 'Aadress ja seaded',
+    city: 'Linn', street: 'Tänav', house: 'Maja number', vatRate: 'Käibemaks (%)',
+    aptCount: 'Korterite arv',
+    phCity: 'nt Tallinn', phStreet: 'nt Pärnu mnt', phHouse: 'nt 12',
+    sectionElec: 'Elektriarve',
+    totalKwh: 'Kokku kWh', totalPrice: 'Koguhind (€)', amperage: 'Võimsustasu (ilma km-ta)',
+    sectionWater: 'Veearve',
+    totalM3: 'Kokku m³',
+    sectionApts: 'Korterite näidud',
+    apt: 'Korter', elecKwh: 'Elekter (kWh)', waterM3: 'Vesi (m³)',
+    previous: 'Eelmine', current: 'Praegune',
+    sectionOther: 'Muud tasud',
+    remondifond: 'Remondifond (€ / korter)',
+    btnCalc: 'Arvuta', btnPdf: 'Genereeri PDF', btnCarry: 'Näidud edasi',
+    sectionBreakdown: 'Jaotus',
+    thApt: 'Korter', thElecUsage: 'Elekter (kWh)', thElecCost: 'Elektri tarbimiskulu (€)',
+    thAmpShare: 'Võimsustasu osa (€)', thElecTotal: 'Elekter kokku (€)',
+    thWaterUsage: 'Vesi (m³)', thWaterCost: 'Vee hind (€)',
+    thRemondifond: 'Remondifond (€)', thGrandTotal: 'Kokku (€)',
+    total: 'Kokku',
+    footer: 'Kommunaalkulude Kalkulaator — Arvutused tehakse brauseris. Andmeid ei saadeta. Väärtused salvestatakse brauserisse.',
+    warnElec: 'Elekter: korterite tarbimine kokku (${used} kWh) ei kattu arve kWh-ga (${bill} kWh).',
+    warnWater: 'Vesi: korterite tarbimine kokku (${used} m³) ei kattu arve m³-ga (${bill} m³).',
+    pdfTitle: 'KOMMUNAALARVE',
+    pdfDate: 'Kuupäev', pdfVat: 'Käibemaksumäär',
+    pdfElec: 'ELEKTER',
+    pdfMeterPrev: 'Näit (eelmine)', pdfMeterCurr: 'Näit (praegune)',
+    pdfUsage: 'Tarbimine', pdfUsageCost: 'Tarbimiskulu',
+    pdfAmpShare: 'Võimsustasu osa (${noVat} + km = ${withVat}) / ${n}',
+    pdfElecTotal: 'Elekter kokku',
+    pdfWater: 'VESI',
+    pdfWaterTotal: 'Vesi kokku',
+    pdfRemondifond: 'Remondifond',
+    pdfTotalDue: 'KOKKU TASUDA',
+  },
+  en: {
+    title1: 'Utility Bill', title2: 'Calculator',
+    subtitle: 'Apartment Utility Bill Calculator — Client-side only, no data sent',
+    sectionAddress: 'Address & Settings',
+    city: 'City', street: 'Street Name', house: 'House Number', vatRate: 'VAT Rate (%)',
+    aptCount: 'Apartments',
+    phCity: 'e.g. Tallinn', phStreet: 'e.g. Pärnu mnt', phHouse: 'e.g. 12',
+    sectionElec: 'Electricity Bill',
+    totalKwh: 'Total kWh Used', totalPrice: 'Total Price (€)', amperage: 'Amperage Cost (excl. VAT)',
+    sectionWater: 'Water Bill',
+    totalM3: 'Total m³ Used',
+    sectionApts: 'Apartment Meter Readings',
+    apt: 'Apt', elecKwh: 'Electricity (kWh)', waterM3: 'Water (m³)',
+    previous: 'Previous', current: 'Current',
+    sectionOther: 'Other Fees',
+    remondifond: 'Renovation Fund (€ / apt)',
+    btnCalc: 'Calculate', btnPdf: 'Generate PDF', btnCarry: 'Carry Forward',
+    sectionBreakdown: 'Breakdown',
+    thApt: 'Apartment', thElecUsage: 'Elec. Usage (kWh)', thElecCost: 'Elec. Usage Cost (€)',
+    thAmpShare: 'Amperage Share (€)', thElecTotal: 'Elec. Total (€)',
+    thWaterUsage: 'Water Usage (m³)', thWaterCost: 'Water Cost (€)',
+    thRemondifond: 'Renov. Fund (€)', thGrandTotal: 'Grand Total (€)',
+    total: 'Total',
+    footer: 'Utility Bill Calculator — All calculations performed client-side. No data is transmitted. Values saved locally in your browser.',
+    warnElec: 'Electricity: Sum of apartment usage (${used} kWh) does not match total bill kWh (${bill} kWh).',
+    warnWater: 'Water: Sum of apartment usage (${used} m³) does not match total bill m³ (${bill} m³).',
+    pdfTitle: 'UTILITY INVOICE',
+    pdfDate: 'Date', pdfVat: 'VAT rate',
+    pdfElec: 'ELECTRICITY',
+    pdfMeterPrev: 'Meter reading (previous)', pdfMeterCurr: 'Meter reading (current)',
+    pdfUsage: 'Usage', pdfUsageCost: 'Usage-based cost',
+    pdfAmpShare: 'Amperage share (${noVat} + VAT = ${withVat}) / ${n}',
+    pdfElecTotal: 'Electricity total',
+    pdfWater: 'WATER',
+    pdfWaterTotal: 'Water total',
+    pdfRemondifond: 'Renovation fund',
+    pdfTotalDue: 'TOTAL DUE',
+  }
+};
+
+let lang = 'et';
+let lastResults = null;
+let aptCount = 4;
+const STORAGE_KEY = 'kommunaal_inputs';
+const LANG_KEY = 'kommunaal_lang';
+
+function t(key) { return TR[lang][key] || key; }
+
+function getAptCount() {
+  return parseInt(document.getElementById('aptCount').value) || 4;
+}
+
+function buildAptCard(num) {
+  const card = document.createElement('div');
+  card.className = 'apt-card';
+  card.setAttribute('data-apt-num', num);
+  card.setAttribute('data-apt', `${t('apt')} ${num}`);
+  card.innerHTML = `
+    <div class="divider-label" style="border:none;margin-top:4px;padding-top:0;" data-t="elecKwh">${t('elecKwh')}</div>
+    <div class="field">
+      <label data-t="previous">${t('previous')}</label>
+      <input type="number" id="apt${num}_elec_prev" step="1" placeholder="kWh">
+    </div>
+    <div class="field">
+      <label data-t="current">${t('current')}</label>
+      <input type="number" id="apt${num}_elec_curr" step="1" placeholder="kWh">
+    </div>
+    <div class="divider-label" data-t="waterM3">${t('waterM3')}</div>
+    <div class="field">
+      <label data-t="previous">${t('previous')}</label>
+      <input type="number" id="apt${num}_water_prev" step="0.001" placeholder="m³">
+    </div>
+    <div class="field">
+      <label data-t="current">${t('current')}</label>
+      <input type="number" id="apt${num}_water_curr" step="0.001" placeholder="m³">
+    </div>
+  `;
+  return card;
+}
+
+function rebuildApartments() {
+  // Save current values before rebuilding
+  const savedValues = {};
+  for (let i = 1; i <= 8; i++) {
+    ['elec_prev', 'elec_curr', 'water_prev', 'water_curr'].forEach(suffix => {
+      const el = document.getElementById(`apt${i}_${suffix}`);
+      if (el && el.value) savedValues[`apt${i}_${suffix}`] = el.value;
+    });
+  }
+
+  aptCount = getAptCount();
+  const grid = document.getElementById('aptsGrid');
+  grid.innerHTML = '';
+
+  for (let i = 1; i <= aptCount; i++) {
+    grid.appendChild(buildAptCard(i));
+  }
+
+  // Restore saved values
+  Object.entries(savedValues).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+
+  // Also restore from localStorage for newly created fields
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (data) {
+      for (let i = 1; i <= aptCount; i++) {
+        ['elec_prev', 'elec_curr', 'water_prev', 'water_curr'].forEach(suffix => {
+          const id = `apt${i}_${suffix}`;
+          const el = document.getElementById(id);
+          if (el && !el.value && data[id]) el.value = data[id];
+        });
+      }
+    }
+  } catch(e) {}
+
+  // Hide results when apartment count changes
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('pdfBtn').disabled = true;
+  lastResults = null;
+
+  saveInputs();
+}
+
+function setLang(l) {
+  lang = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e) {}
+  document.documentElement.lang = l;
+  applyTranslations();
+}
+
+function applyTranslations() {
+  document.getElementById('title').innerHTML = `${t('title1')} <span>${t('title2')}</span>`;
+  document.getElementById('subtitle').textContent = t('subtitle');
+  document.title = `${t('title1')} ${t('title2')}`;
+
+  document.getElementById('langEt').classList.toggle('active', lang === 'et');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const key = el.getAttribute('data-t');
+    if (TR[lang][key]) el.textContent = TR[lang][key];
+  });
+
+  document.querySelectorAll('[data-ph]').forEach(el => {
+    const key = el.getAttribute('data-ph');
+    if (TR[lang][key]) el.placeholder = TR[lang][key];
+  });
+
+  document.querySelectorAll('[data-apt-num]').forEach(el => {
+    const num = el.getAttribute('data-apt-num');
+    el.setAttribute('data-apt', `${t('apt')} ${num}`);
+  });
+
+  document.getElementById('footer').textContent = t('footer');
+}
+
+function saveInputs() {
+  const inputs = {};
+  document.querySelectorAll('input, select').forEach(el => {
+    if (el.id) inputs[el.id] = el.value;
+  });
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs)); } catch(e) {}
+}
+
+function loadInputs() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!data) return;
+    // Restore aptCount first so we build the right number of cards
+    if (data.aptCount) {
+      document.getElementById('aptCount').value = data.aptCount;
+    }
+    // Rebuild apartments with correct count
+    rebuildApartments();
+    // Now restore all other values
+    Object.entries(data).forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    });
+  } catch(e) {}
+}
+
+document.addEventListener('input', saveInputs);
+document.addEventListener('change', saveInputs);
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === 'en' || saved === 'et') lang = saved;
+  } catch(e) {}
+  // Build initial apartments, then load saved data
+  rebuildApartments();
+  loadInputs();
+  applyTranslations();
+});
+
+function val(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? 0 : v;
+}
+
+function fmt(n) { return n.toFixed(2); }
+
+function carryForward() {
+  const n = getAptCount();
+  for (let i = 1; i <= n; i++) {
+    const elecCurr = document.getElementById(`apt${i}_elec_curr`);
+    const elecPrev = document.getElementById(`apt${i}_elec_prev`);
+    const waterCurr = document.getElementById(`apt${i}_water_curr`);
+    const waterPrev = document.getElementById(`apt${i}_water_prev`);
+    if (elecCurr && elecPrev) { elecPrev.value = elecCurr.value; elecCurr.value = ''; }
+    if (waterCurr && waterPrev) { waterPrev.value = waterCurr.value; waterCurr.value = ''; }
+  }
+  // Clear bill totals for new period
+  document.getElementById('elecTotalKwh').value = '';
+  document.getElementById('elecTotalPrice').value = '';
+  document.getElementById('waterTotalM3').value = '';
+  document.getElementById('waterTotalPrice').value = '';
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('pdfBtn').disabled = true;
+  lastResults = null;
+  saveInputs();
+}
+
+function calculate() {
+  const n = getAptCount();
+  const vatRate = val('vatRate') / 100;
+  const elecTotalKwh = val('elecTotalKwh');
+  const elecTotalPrice = val('elecTotalPrice');
+  const amperageCostNoVat = val('amperageCostNoVat');
+  const waterTotalM3 = val('waterTotalM3');
+  const waterTotalPrice = val('waterTotalPrice');
+
+  const remondifond = val('remondifond');
+  const amperageWithVat = amperageCostNoVat * (1 + vatRate);
+  const usagePool = elecTotalPrice - amperageWithVat;
+  const amperagePerApt = amperageWithVat / n;
+
+  const apartments = [];
+  let totalElecUsage = 0;
+  let totalWaterUsage = 0;
+
+  for (let i = 1; i <= n; i++) {
+    const elecUsage = val(`apt${i}_elec_curr`) - val(`apt${i}_elec_prev`);
+    const waterUsage = val(`apt${i}_water_curr`) - val(`apt${i}_water_prev`);
+    apartments.push({ num: i, elecUsage, waterUsage });
+    totalElecUsage += elecUsage;
+    totalWaterUsage += waterUsage;
+  }
+
+  const wElec = document.getElementById('warningElec');
+  const wWater = document.getElementById('warningWater');
+
+  if (elecTotalKwh > 0 && Math.abs(totalElecUsage - elecTotalKwh) > 0.5) {
+    wElec.textContent = t('warnElec').replace('${used}', fmt(totalElecUsage)).replace('${bill}', fmt(elecTotalKwh));
+    wElec.classList.add('visible');
+  } else {
+    wElec.classList.remove('visible');
+  }
+
+  if (waterTotalM3 > 0 && Math.abs(totalWaterUsage - waterTotalM3) > 0.01) {
+    wWater.textContent = t('warnWater').replace('${used}', totalWaterUsage.toFixed(3)).replace('${bill}', waterTotalM3.toFixed(3));
+    wWater.classList.add('visible');
+  } else {
+    wWater.classList.remove('visible');
+  }
+
+  const results = apartments.map(apt => {
+    const elecDivisor = elecTotalKwh > 0 ? elecTotalKwh : totalElecUsage;
+    const elecUsageCost = elecDivisor > 0 ? (apt.elecUsage / elecDivisor) * usagePool : 0;
+    const elecTotal = elecUsageCost + amperagePerApt;
+    const waterDivisor = waterTotalM3 > 0 ? waterTotalM3 : totalWaterUsage;
+    const waterCost = waterDivisor > 0 ? (apt.waterUsage / waterDivisor) * waterTotalPrice : 0;
+    const grandTotal = elecTotal + waterCost + remondifond;
+    return { ...apt, elecUsageCost, amperagePerApt, elecTotal, waterCost, remondifond, grandTotal };
+  });
+
+  const tbody = document.getElementById('resultsBody');
+  tbody.innerHTML = '';
+
+  let sEU = 0, sEC = 0, sA = 0, sET = 0, sWU = 0, sWC = 0, sR = 0, sG = 0;
+
+  results.forEach(r => {
+    sEU += r.elecUsage; sEC += r.elecUsageCost; sA += r.amperagePerApt;
+    sET += r.elecTotal; sWU += r.waterUsage; sWC += r.waterCost;
+    sR += r.remondifond; sG += r.grandTotal;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${t('apt')} ${r.num}</td>
+      <td class="num">${fmt(r.elecUsage)}</td>
+      <td class="num">${fmt(r.elecUsageCost)}</td>
+      <td class="num">${fmt(r.amperagePerApt)}</td>
+      <td class="num">${fmt(r.elecTotal)}</td>
+      <td class="num">${r.waterUsage.toFixed(3)}</td>
+      <td class="num">${fmt(r.waterCost)}</td>
+      <td class="num">${fmt(r.remondifond)}</td>
+      <td class="num"><strong>${fmt(r.grandTotal)}</strong></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'total-row';
+  totalRow.innerHTML = `
+    <td>${t('total')}</td>
+    <td class="num">${fmt(sEU)}</td>
+    <td class="num">${fmt(sEC)}</td>
+    <td class="num">${fmt(sA)}</td>
+    <td class="num">${fmt(sET)}</td>
+    <td class="num">${sWU.toFixed(3)}</td>
+    <td class="num">${fmt(sWC)}</td>
+    <td class="num">${fmt(sR)}</td>
+    <td class="num"><strong>${fmt(sG)}</strong></td>
+  `;
+  tbody.appendChild(totalRow);
+
+  document.getElementById('results').classList.add('visible');
+  document.getElementById('pdfBtn').disabled = false;
+
+  lastResults = {
+    n, vatRate, remondifond, amperageCostNoVat, amperageWithVat, amperagePerApt,
+    usagePool, elecTotalKwh, elecTotalPrice,
+    waterTotalM3, waterTotalPrice,
+    apartments: results,
+    address: {
+      city: document.getElementById('city').value,
+      street: document.getElementById('street').value,
+      house: document.getElementById('house').value
+    }
+  };
+}
+
+function generatePDF() {
+  if (!lastResults) return;
+  const r = lastResults;
+  const pageW = 210;
+  const margin = 20;
+  const today = new Date().toLocaleDateString(lang === 'et' ? 'et-EE' : 'en-GB');
+
+  r.apartments.forEach((apt, idx) => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    let y = margin;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text(t('pdfTitle'), margin, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const addr = [r.address.street, r.address.house].filter(Boolean).join(' ');
+    const fullAddr = [addr, `${t('apt')} ${apt.num}`, r.address.city].filter(Boolean).join(', ');
+    doc.text(fullAddr, margin, y);
+    doc.text(`${t('pdfDate')}: ${today}`, pageW - margin, y, { align: 'right' });
+    y += 6;
+
+    y += 4;
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageW - margin, y);
+    y += 8;
+
+    // Electricity
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(t('pdfElec'), margin, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+
+    const ampLabel = t('pdfAmpShare')
+      .replace('${noVat}', fmt(r.amperageCostNoVat))
+      .replace('${withVat}', fmt(r.amperageWithVat))
+      .replace('${n}', r.n);
+
+    const elecRows = [
+      [t('pdfMeterPrev'), `${val(`apt${apt.num}_elec_prev`)} kWh`],
+      [t('pdfMeterCurr'), `${val(`apt${apt.num}_elec_curr`)} kWh`],
+      [t('pdfUsage'), `${fmt(apt.elecUsage)} kWh`],
+      [t('pdfUsageCost'), `${fmt(apt.elecUsageCost)} EUR`],
+      [ampLabel, `${fmt(apt.amperagePerApt)} EUR`],
+      [t('pdfElecTotal'), `${fmt(apt.elecTotal)} EUR`],
+    ];
+
+    elecRows.forEach(([label, value]) => {
+      const isBold = label === t('pdfElecTotal');
+      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      doc.text(label, margin, y);
+      doc.text(value, pageW - margin, y, { align: 'right' });
+      y += 6;
+    });
+
+    y += 4;
+    doc.setDrawColor(180);
+    doc.setLineWidth(0.2);
+    doc.line(margin, y, pageW - margin, y);
+    y += 8;
+
+    // Water
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(t('pdfWater'), margin, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+
+    const waterRows = [
+      [t('pdfMeterPrev'), `${val(`apt${apt.num}_water_prev`)} m³`],
+      [t('pdfMeterCurr'), `${val(`apt${apt.num}_water_curr`)} m³`],
+      [t('pdfUsage'), `${apt.waterUsage.toFixed(3)} m³`],
+      [t('pdfWaterTotal'), `${fmt(apt.waterCost)} EUR`],
+    ];
+
+    waterRows.forEach(([label, value]) => {
+      const isBold = label === t('pdfWaterTotal');
+      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      doc.text(label, margin, y);
+      doc.text(value, pageW - margin, y, { align: 'right' });
+      y += 6;
+    });
+
+    // Remondifond
+    if (r.remondifond > 0) {
+      y += 4;
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.2);
+      doc.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(t('pdfRemondifond'), margin, y);
+      doc.text(`${fmt(r.remondifond)} EUR`, pageW - margin, y, { align: 'right' });
+      y += 6;
+    }
+
+    y += 8;
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageW - margin, y);
+    y += 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text(t('pdfTotalDue'), margin, y);
+    doc.text(`${fmt(apt.grandTotal)} EUR`, pageW - margin, y, { align: 'right' });
+
+    const now = new Date();
+    const monthYear = `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+    const streetSlug = (r.address.street || '').replace(/\s+/g, '-').toLowerCase();
+    const houseNum = (r.address.house || '').replace(/\s+/g, '-');
+    const filename = [streetSlug, houseNum, `${t('apt').toLowerCase()}-${apt.num}`, monthYear].filter(Boolean).join('_') + '.pdf';
+    doc.save(filename);
+  });
+}
+</script>
+</body>
+</html>
